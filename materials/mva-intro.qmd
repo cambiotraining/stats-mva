@@ -1,0 +1,22 @@
+---
+title: "Background"
+---
+```{r}
+#| echo: false
+#| message: false
+#| results: hide
+source(file = "setup_files/setup.R")
+```
+
+```{python}
+#| echo: false
+#| message: false
+import shutup;shutup.please()
+exec(open('setup_files/setup.py').read())
+```
+
+## Principal component analysis
+
+## K-means clustering
+
+## Hierarchical clustering

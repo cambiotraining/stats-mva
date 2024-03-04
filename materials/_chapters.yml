@@ -1,0 +1,5 @@
+book:
+  chapters:
+    - part: "Multivariate analysis"
+      chapters:
+        - materials/mva-intro.qmd
