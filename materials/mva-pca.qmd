@@ -200,6 +200,8 @@ pca_fit <- finches_hybrid %>%
   prcomp()
 ```
 
+This is a bit of daunting looking output, but not to worry. We'll unpack things along the way!
+
 ```{r}
 pca_fit
 ```
@@ -216,12 +218,49 @@ pca_fit %>%
 
 ## Python
 
+In Python we can scale our data with the `StandardScaler()` function from `sklearn.preprocessing`. We can only scale numerical data, so we need to get those first.
+
+```{python}
+from sklearn.preprocessing import StandardScaler
+
+# select the numeric values
+X = finches_hybrid_py.select_dtypes(include = ['float64', 'int64'])
+
+# define the scaler
+std_scaler = StandardScaler()
+
+# scale the numeric values
+finches_scaled = std_scaler.fit_transform(X)
+```
+
+Now that we have the scaled values, we can perform the PCA. We do this using the `PCA()` function from `sklearn.decomposition`.
+
+We need to tell it how many principal components we want it to return. We set it to `r finches_hybrid %>% ncol() - 1` here, which is the number of numerical variables.
+
+```{python}
+from sklearn.decomposition import PCA
+
+# define the number of principal components
+n_components = 6
+
+# set the number of principal components
+pca = PCA(n_components = n_components)
+
+# perform the PCA
+principal_components = pca.fit_transform(finches_scaled)
+
+# create a data frame containing the information
+# changing the column names based on the PC
+pca_fit_py = pd.DataFrame(data = principal_components, columns=[f'PC{i}' for i in range(1, n_components + 1)])
+```
+
+
 :::
+
+We can figure out how much each principal component is contributing to the amount of variance that is being explained:
 
 ::: {.panel-tabset group="language"}
 ## R
-
-We can figure out how much each principal component is contributing to the amount of variance that is being explained:
 
 ```{r}
 pca_fit %>% 
@@ -233,6 +272,31 @@ pca_fit %>%
 ```
 
 ## Python
+
+First, we extract the amount of variance explained by each principal component. Next, we convert this to a DataFrame:
+
+```{python}
+explained_variance_pc = pca.explained_variance_ratio_
+
+percent = (
+  pd.DataFrame({'variance_explained':
+                (explained_variance_pc * 100),
+                'PC': [f'PC{i+1}' for i in range(n_components)]})
+                )
+                
+percent.head()
+```
+
+Next, we can plot this:
+
+```{python}
+#| results: hide
+(ggplot(percent,
+         aes(x = "PC", y = "variance_explained")) +
+     geom_point() +
+     geom_line(group = 1))
+```
+
 
 :::
 
