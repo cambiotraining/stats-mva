@@ -3,3 +3,4 @@ book:
     - part: "Multivariate analysis"
       chapters:
         - materials/mva-intro.qmd
+        - materials/mva-pca.qmd
