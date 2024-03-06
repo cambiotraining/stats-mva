@@ -207,15 +207,6 @@ pca_fit
 ```
 
 
-```{r}
-pca_fit %>%
-  # add the original data
-  augment(finches_hybrid) %>%
-  ggplot(aes(.fittedPC1, .fittedPC2, colour = category)) + 
-  geom_point(size = 1.5)
-```
-
-
 ## Python
 
 In Python we can scale our data with the `StandardScaler()` function from `sklearn.preprocessing`. We can only scale numerical data, so we need to get those first.
@@ -256,6 +247,8 @@ pca_fit_py = pd.DataFrame(data = principal_components, columns=[f'PC{i}' for i i
 
 
 :::
+
+### Visualising the principal components
 
 We can figure out how much each principal component is contributing to the amount of variance that is being explained:
 
@@ -302,11 +295,163 @@ Next, we can plot this:
 
 This means that PC1 is able to explain around `r round(pca_fit %>% tidy(matrix = "eigenvalues") %>% slice(1) %>% pull(percent) * 100, digits = 0)`% of the variance in the data. PC2 is able to explain around `r round(pca_fit %>% tidy(matrix = "eigenvalues") %>% slice(2) %>% pull(percent) * 100, digits = 0)`% of the variance in the data, and so forth.
 
+### Loadings
+
+Let's think back to our smoothy metaphor. Remember how the smoothy was made up of various fruits - just like our PCs are made up of parts of our original variables.
+
+Let's, for the sake of illustrating this, assume the following for PC1:
+
+| parts| variable|
+|:- |:- |
+| 4 | `blength` |
+| 1 | `tarsus` |
+
+Each PC has something called an **eigenvector**, which in simplest terms is a line with a certain direction and length.
+
+If we want to calculate the length of the eigenvector for PC1, we can employ Pythagoras (well, not directly, just his legacy). This gives:
+
+$eigenvector \, PC1 = \sqrt{4^2 + 1^2} = 4.12$
+
+The **loading scores** for PC1 are the "parts" scaled for this length, _i.e._:
+
+| scaled parts| variable|
+|:- |:- |
+| 4 / 4.12 = 0.97 | `blength` |
+| 1 / 4.12 = 0.24 | `tarsus` |
+
+What we can do with these values is plot the **loadings** for each of the original variables.
+
 ::: {.panel-tabset group="language"}
 ## R
 
+It might be helpful to visualise this in context of the original data. We can easily add the original data to the fitted PCs as follows (and plot it):
+
+```{r}
+pca_fit %>%
+  # add the original data
+  augment(finches_hybrid) %>%
+  ggplot(aes(.fittedPC1, .fittedPC2, colour = category)) + 
+  geom_point(size = 1.5)
+```
+
+This gives us the individual contributions to PC1 and PC2 for each observation.
+
+If we wanted to know how much each *variable* is contributing to PC1 and PC2 we would have to use the loadings.
+
+We can extract all the loadings as follows:
+
+```{r}
+pca_fit %>% 
+  tidy(matrix = "loadings")
+```
+
+We'll have to reformat this a little, so that we have the values in separate columns. First, we rename some of the columns / values to make things more consistent and clearer:
+
+```{r}
+pca_loadings <- pca_fit %>% 
+  tidy(matrix = "loadings") %>% 
+  rename(terms = column,
+         component = PC) %>% 
+  mutate(component = paste0("PC", component))
+
+head(pca_loadings)
+```
+
+Now we can reformat the data:
+
+```{r}
+pca_loadings <- pca_loadings %>% 
+  pivot_wider(names_from = "component",
+              values_from = "value")
+
+pca_loadings
+```
+
+We can then plot this. This is a little bit involved, unfortunately. And not something I'd recommend remembering the code by heart, but we're doing the following:
+
+1. Take the PCA output and add the original data
+2. Plot this
+3. Create a line from the origin (`x = 0`, `y = 0`) for each loading
+4. Make it an arrow
+5. Add the variable name as a label
+
+We define the arrow as follows:
+
+```{r}
+# define arrow style
+arrow_style <- arrow(length = unit(2, "mm"),
+                     type = "closed")
+```
+
+
+```{r}
+pca_fit %>%
+  # add the original data
+  augment(finches_hybrid) %>%
+  ggplot() + 
+  geom_point(aes(.fittedPC1, .fittedPC2, colour = category), size = 1.5) +
+  geom_segment(data = pca_loadings,
+               aes(xend = PC1, yend = PC2),
+               x = 0, y = 0,
+               arrow = arrow_style) +
+  geom_text(data = pca_loadings,
+            aes(x = PC1, y = PC2, label = terms), 
+            hjust = 0, 
+            vjust = 1,
+            size = 5) 
+```
+
+
 ## Python
 
+:::
+
+After all that we end up with a rather unclear plot. The `r pca_loadings %>% nrow()` variables that contribute to each principal component have very overlapping contributions in PC1. As such, it's difficult to see which variable contributes what!
+
+The reason why I'm still showing it here is that this kind of plot is very often used in PCA, so at least you can recognise it. If the variables have well-separated contributions across the two principal components, then it can be quite informative.
+
+A better way would be to plot the individual contributions to each principal component as an ordered bar plot. This does require some rejigging of the data again (sorry!).
+
+::: {.panel-tabset group="language"}
+## R
+
+First, we convert our loadings data back to a "long" format. We also add an extra column, `direction`, which indicates if the contribution to the principal component is positive or negative.
+
+```{r}
+pca_loadings <- pca_loadings %>% 
+  pivot_longer(cols = -terms,
+               names_to = "component",
+               values_to = "value") %>% 
+  # add a column that indicates direction
+  # (positive or negative)
+  mutate(direction = ifelse(value < 0, "positive", "negative"))
+
+# have a look at the data
+head(pca_loadings)
+```
+
+We can now visualise this. Here we are using some additional functionality offered by the `tidytext` library. Make sure to install it, if needed. Then load it.
+
+```{r}
+# we need this library
+library(tidytext)
+
+pca_loadings %>% 
+  mutate(terms = tidytext::reorder_within(terms,
+                                          abs(value),
+                                          component)) %>%
+  ggplot(aes(x = abs(value), y = terms, fill = direction)) +
+  geom_col() +
+  facet_wrap(vars(component), scales = "free_y") +
+  tidytext::scale_y_reordered()
+```
+
+## Python
+
+:::
+
+:::{.callout-important}
+It is important to keep the amount of variance explained by each principal component in mind. For example, PC3 only explains around `r round(pca_fit %>% tidy(matrix = "eigenvalues") %>% filter(PC == 3) %>% pull(percent) * 100, digits = 1)` of the variance. So although several variables contribute substantially to PC3, the contribution of PC3 itself remains small.
 :::
 
 ::: {.panel-tabset group="language"}
