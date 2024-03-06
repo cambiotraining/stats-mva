@@ -17,6 +17,14 @@ exec(open('setup_files/setup.py').read())
 
 ## Principal component analysis
 
+This is a statistical technique for reducing the dimensionality of a data set. The technique aims to find a new set of variables for describing the data. These new variables are made from a weighted sum of the old variables. The weighting is chosen so that the new variables can be ranked in terms of importance in that the first new variable is chosen to account for as much variation in the data as possible. Then the second new variable is chosen to account for as much of the remaining variation in the data as possible, and so on until there are as many new variables as old variables.
+
 ## K-means clustering
 
+This is a method for grouping observations into clusters. It groups data based on similarity and is an often-used method unsupervised machine learning algorithm.
+
+It groups the data into a fixed number of clusters ($k$) and the ultimate aim is to discover patterns in the data.
+
 ## Hierarchical clustering
+
+A clustering method that tries to create a hierarchy across data, often displayed as a *dendogram*. This visualises the way the clusters are arranged.

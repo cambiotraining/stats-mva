@@ -61,13 +61,6 @@ Long story short: these data are part of a hybridisation study on finches at the
 
 From many years of studies, going back to Darwin, we now know that the beak shape of the finches are important in their chances for survival. Changes in beak shape have led to new species and this study explored how movement of genes from a rare immigrant species (*Geospiza fuliginosa*) occurred through two other species (*G. fortis* and *G. scandens*). The researchers recorded various morphological traits.
 
-
-It uses the following abbreviations:
-
-* `F`	= *G. fortis*
-* `f`	= *G. fuliginosa*
-* `S`	= *G. scandens*
-
 ## Load and visualise the data
 
 First, we load the data:
