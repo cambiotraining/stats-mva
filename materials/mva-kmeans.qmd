@@ -106,9 +106,9 @@ ggplot(penguins, aes(x = bill_depth_mm,
 ```{python}
 #| results: hide
 (ggplot(penguins_py,
-    aes(x = 'bill_depth_mm',
-        y = 'bill_length_mm',
-        colour = 'species')) +
+    aes(x = "bill_depth_mm",
+        y = "bill_length_mm",
+        colour = "species")) +
     geom_point())
 ```
 
@@ -154,6 +154,8 @@ The output is a list of vectors, with differing lengths. That's because they con
 * `totss`, `tot.withinss`, `betweenss`, and `iter` contain information about the full clustering
 
 ## Python
+
+To do the clustering, we'll be using the `KMeans()` function.
 
 :::
 
