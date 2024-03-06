@@ -45,7 +45,7 @@ exec(open('setup_files/setup.py').read())
 
 ## Purpose and aim
 
-This is a method for grouping observations into clusters. It groups data based on similarity and is an often-used method unsupervised machine learning algorithm.
+This is a method for grouping observations into clusters. It groups data based on similarity and is an often-used unsupervised machine learning algorithm.
 
 It groups the data into a fixed number of clusters ($k$) and the ultimate aim is to discover patterns in the data.
 
