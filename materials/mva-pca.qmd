@@ -250,7 +250,7 @@ pca_fit_py = pd.DataFrame(data = principal_components, columns=[f'PC{i}' for i i
 
 ### Visualising the principal components
 
-We can figure out how much each principal component is contributing to the amount of variance that is being explained:
+We can figure out how much each principal component is contributing to the amount of variance that is being explained. This is called a *screeplot*.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -454,33 +454,207 @@ pca_loadings %>%
 It is important to keep the amount of variance explained by each principal component in mind. For example, PC3 only explains around `r round(pca_fit %>% tidy(matrix = "eigenvalues") %>% filter(PC == 3) %>% pull(percent) * 100, digits = 1)` of the variance. So although several variables contribute substantially to PC3, the contribution of PC3 itself remains small.
 :::
 
-::: {.panel-tabset group="language"}
-## R
-
-## Python
-
-:::
-
-
-
 ## Exercises
 
-### Title {#sec-exr_title}
+### Penguins {#sec-exr_penguins}
 
 :::{.callout-exercise}
 
 {{< level 2 >}}
 
-For this exercise we'll be using the data from `data/file.csv`.
+For this exercise we'll be using the data from `data/penguins.csv`. These data are from the `palmerpenguins` package (for more information, see [the GitHub page](https://github.com/allisonhorst/palmerpenguins)).
+
+I would like you to do the following:
+
+1. Load and visualise the data.
+2. Create a screeplot and see how many PCs would be best.
+3. Calculate the loadings for PC1 and PC2 and visualise them.
+4. Any conclusions you might draw from the analysis.
 
 ::: {.callout-answer collapse="true"}
+
+#### Load and visualise the data
 
 ::: {.panel-tabset group="language"}
 ## R
 
+```{r}
+penguins <- read_csv("data/penguins.csv")
+```
+
+```{r}
+head(penguins)
+```
+
+We can see that there are different kinds of variables, both categorical and numerical. Also, there appear to be some missing data in the data set, so we probably have to deal with that.
+
+Lastly, we should be careful with the `year` column: it is recognised as a numerical column (because it contains numbers), but we should view it as a factor, since the years have an ordered, categorical meaning.
+
+To get a better sense of our data we could plot all the numerical variables against each other, to see if there is any possible correlation between them. Doing that one-by-one in ggplot is tedious, so I'm using the `pairs()` function here. Pretty? No. Effective? Yes.
+
+```{r}
+penguins %>% 
+  select(where(is.numeric)) %>% 
+  pairs()
+```
+
+
+
 ## Python
 
 :::
+
+So we see that there is some possible grouping going on and possibly some linear relationships, too. However, there are multiple groups and closely related measurements, so it is not very surprising that there are possible relationships within the data.
+
+#### Perform the PCA
+
+First, we need to do a little bit of data tidying. We convert `year` to a factor and deal with the missing values. We're not dealing with them in a particularly subtle way here, removing all the rows that contain at least one missing value.
+
+In your own research you may want to be more careful and only remove missing values from variables that you using in the PCA (here we include everything).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+penguins <- penguins %>% 
+  mutate(year = factor(year)) %>% 
+  drop_na() # remove all rows with missing values
+```
+
+```{r}
+pca_fit <- penguins %>% 
+  # keep only the numeric columns
+  select(where(is.numeric)) %>%
+  # scale the data
+  scale() %>%
+  # perform the PCA
+  prcomp()
+```
+
+## Python
+
+:::
+
+#### Visualise the PCs
+
+::: {.panel-tabset group="language"}
+## R
+
+We can visualise the principal components:
+
+```{r}
+pca_fit %>% 
+  tidy(matrix = "eigenvalues") %>% 
+  ggplot(aes(x = PC,
+             y = percent)) +
+  geom_point() +
+  geom_line()
+```
+
+
+## Python
+
+:::
+
+It looks like using the first two principal components is probably capturing the majority of the variance in the data. Combined they account for `r round(pca_fit %>% tidy(matrix = "eigenvalues") %>% filter(PC %in% c(1, 2)) %>% pull(percent) %>% sum(), 1) * 100`% of the variance.
+
+#### Loadings
+
+Next, we get the loadings: how much is each original variable contributing to the individual principal components?
+
+::: {.panel-tabset group="language"}
+## R
+
+We start with some data tidying and wrangling, since we need the data in a "wide" format for the next plot to work:
+
+```{r}
+pca_loadings <- pca_fit %>% 
+  tidy(matrix = "loadings") %>% 
+  rename(terms = column,
+         component = PC) %>% 
+  mutate(component = paste0("PC", component)) %>% 
+  pivot_wider(names_from = "component",
+              values_from = "value")
+
+head(pca_loadings)
+```
+
+Arrow style:
+
+```{r}
+# define arrow style
+arrow_style <- arrow(length = unit(2, "mm"),
+                     type = "closed")
+```
+
+```{r}
+pca_fit %>%
+  # add the original data
+  augment(penguins) %>%
+  ggplot() + 
+  geom_point(aes(.fittedPC1, .fittedPC2, colour = species), size = 1.5) +
+  geom_segment(data = pca_loadings,
+               aes(xend = PC1, yend = PC2),
+               x = 0, y = 0,
+               arrow = arrow_style) +
+  geom_text(data = pca_loadings,
+            aes(x = PC1, y = PC2, label = terms), 
+            hjust = 0, 
+            vjust = 1,
+            size = 5) 
+```
+
+We can also visualise these contributions using a bar plot. We need the data in a slightly different format before we can do this:
+
+```{r}
+pca_loadings <- pca_loadings %>% 
+  pivot_longer(cols = -terms,
+               names_to = "component",
+               values_to = "value") %>% 
+  # add a column that indicates direction
+  # (positive or negative)
+  mutate(direction = ifelse(value < 0, "positive", "negative"))
+
+# have a look at the data
+head(pca_loadings)
+```
+
+But after that, we can visualise it as follows:
+
+```{r}
+# we need this library
+library(tidytext)
+
+pca_loadings %>% 
+  mutate(terms = tidytext::reorder_within(terms,
+                                          abs(value),
+                                          component)) %>%
+  ggplot(aes(x = abs(value), y = terms, fill = direction)) +
+  geom_col() +
+  facet_wrap(vars(component), scales = "free_y") +
+  tidytext::scale_y_reordered()
+```
+
+## Python
+
+:::
+
+#### Conclusions
+1. Load the data.
+2. Create a screeplot and see how many PCs would be best.
+3. Calculate the loadings for PC1 and PC2 and visualise them.
+4. Any conclusions you might draw from the analysis.
+
+Taken together, we can conclude/comment on a few things:
+
+1. Endlessly looking at pairwise comparisons between continuous variables probably becomes a bit tedious. An alternative would be to calculate correlations between the variables to get some insight into your data. In the end it depends on how many variables you have and how much you (want to) know about them.
+2. In this case, I'd say that the first two principal components capture most of the variance in the data.
+3. The largest contributing variables mostly differ between the first two principal components. The variables that make up PC1 are very similar in terms of contribution, whereas two variables more or less make up PC2 entirely.
+
+The variables `flipper_length_mm` and `body_mass_g` contribute pretty much only to PC1 (they are horizontal in the loadings plot), whereas `bill_length_mm` is contributing a reasonable amount to both PC1 *and* PC2.
+
+From the data itself we can see that there is clear separation between the three `species`. The Gentoo penguins separate further once again from the other two species.
+
 :::
 :::
 
@@ -489,8 +663,8 @@ For this exercise we'll be using the data from `data/file.csv`.
 ::: {.callout-tip}
 #### Key points
 
-- PCA allows you to reduce a large number of variables into fewer principal components
-- Each PC is made up of a combination of the original variables and captures as much of the variance within the data as possible
-- The loadings tell you how much each original variable contributes to each PC
-- A screeplot is a graphical representation of the amount of variance explained by each PC
+- PCA allows you to reduce a large number of variables into fewer principal components.
+- Each PC is made up of a combination of the original variables and captures as much of the variance within the data as possible.
+- The loadings tell you how much each original variable contributes to each PC.
+- A screeplot is a graphical representation of the amount of variance explained by each PC.
 :::
