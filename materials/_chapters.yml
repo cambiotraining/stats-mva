@@ -4,3 +4,4 @@ book:
       chapters:
         - materials/mva-intro.qmd
         - materials/mva-pca.qmd
+        - materials/mva-kmeans.qmd

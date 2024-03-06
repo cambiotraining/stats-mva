@@ -1,0 +1,515 @@
+---
+title: "K-means clustering"
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| results: hide
+source(file = "setup_files/setup.R")
+```
+
+```{python}
+#| echo: false
+#| message: false
+import shutup;shutup.please()
+exec(open('setup_files/setup.py').read())
+```
+
+::: {.callout-tip}
+## Learning outcomes
+
+- Understand how k-means clustering works
+- Be able to perform k-means clustering
+- Be able to optimise cluster number
+
+:::
+
+## Libraries and functions
+
+::: {.callout-note collapse="true"}
+## Click to expand
+
+::: {.panel-tabset group="language"}
+## R
+
+### Libraries
+### Functions
+
+## Python
+
+### Libraries
+### Functions
+:::
+:::
+
+## Purpose and aim
+
+This is a method for grouping observations into clusters. It groups data based on similarity and is an often-used method unsupervised machine learning algorithm.
+
+It groups the data into a fixed number of clusters ($k$) and the ultimate aim is to discover patterns in the data.
+
+K-means clustering is an iterative process. It follows the following steps:
+
+1. Select the number of clusters to identify (e.g. K = 3)
+2. Create centroids
+3. Place centroids randomly in your data
+4. Assign each data point to the closest centroid
+5. Calculate the centroid of each new cluster
+6. Repeat steps 4-5 until the clusters do not change
+
+## Data
+
+Once again we'll be using the data from `data/penguins.csv`. These data are from the `palmerpenguins` package (for more information, see [the GitHub page](https://github.com/allisonhorst/palmerpenguins)).
+
+## Load and visualise the data
+
+If you haven't done so already, load the data.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+penguins <- read_csv("data/penguins.csv")
+
+head(penguins)
+```
+
+## Python
+
+```{python}
+# load the data
+penguins_py = pd.read_csv("data/penguins.csv")
+
+# inspect the data
+penguins_py.head()
+```
+
+:::
+
+There are a variety of variables in this data set. The following example focuses on the two variables `bill_length_mm` and `bill_depth_mm` across the various `species` recorded.,
+
+These variables are distributed as follows:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+ggplot(penguins, aes(x = bill_depth_mm,
+                     y = bill_length_mm,
+                     colour = species)) +
+  geom_point()
+```
+
+## Python
+
+```{python}
+#| results: hide
+(ggplot(penguins_py,
+    aes(x = 'bill_depth_mm',
+        y = 'bill_length_mm',
+        colour = 'species')) +
+    geom_point())
+```
+
+:::
+
+We can already see that the data appear to cluster quite closely by `species.` A great example to illustrate K-means clustering (you’d almost think I chose the example on purpose)!
+
+## Perform K-means clustering
+
+To do the clustering, we’ll need to do a bit of data wrangling, since we can only do the clustering on numerical data.
+
+As we did with the PCA, we also need to scale the data. Although it is not required in this case, because both variables have the same unit (millimetres), it is good practice. In other scenarios it could be that there are different units that are being compared, which could affect the clustering.
+
+::: {.panel-tabset group="language"}
+## R
+
+We're using the `kmeans()` function.
+
+```{r}
+penguins_scaled <- penguins %>% 
+  select(bill_depth_mm,          # select data
+         bill_length_mm) %>% 
+  drop_na() %>%                  # remove missing values
+  scale() %>%                    # scale the data
+  as_tibble() %>% 
+  rename(bill_depth_scaled = bill_depth_mm,
+         bill_length_scaled = bill_length_mm)
+```
+
+Next, we can perform the clustering:
+
+```{r}
+kclust <- kmeans(penguins_scaled, # perform k-means clustering
+                 centers = 3)     # using 3 centers
+
+summary(kclust)                  # summarise output
+```
+
+The output is a list of vectors, with differing lengths. That's because they contain different types of information:
+
+* `cluster` contains information about each point
+* `centers`, `withinss`, and `size` contain information about each cluster
+* `totss`, `tot.withinss`, `betweenss`, and `iter` contain information about the full clustering
+
+## Python
+
+:::
+
+### Visualise clusters
+
+::: {.panel-tabset group="language"}
+## R
+
+When we performed the clustering, the centers were calculated. These values give the (x, y) coordinates of the centroids.
+
+```{r}
+tidy_clust <- tidy(kclust) # get centroid coordinates
+
+tidy_clust
+```
+
+## Python
+
+:::
+
+:::{.callout-note}
+## Initial centroid placement
+
+The initial centroids get randomly placed in the data. This, combined with the iterative nature of the process, means that the values that you will see are going to be slightly different from the values here. That's normal!
+:::
+
+::: {.panel-tabset group="language"}
+## R
+
+Next, we want to visualise to which data points belong to which cluster. We can do that as follows:
+
+```{r}
+kclust %>%                              # take clustering data
+  augment(penguins_scaled) %>%          # combine with original data
+  ggplot(aes(x = bill_depth_scaled,     # plot the scaled data
+             y = bill_length_scaled)) +
+  geom_point(aes(colour = .cluster)) +  # colour by classification
+  geom_point(data = tidy_clust,
+             size = 7, shape = 'x')     # add the cluster centers
+```
+
+## Python
+
+:::
+
+## Optimising cluster number
+
+In the example we set the number of clusters to 3. This made sense, because the data already visually separated in roughly three groups - one for each species.
+
+However, it might be that the cluster number to choose is a lot less obvious. In that case it would be helpful to explore clustering your data into a range of clusters.
+
+In short, we determine which values of $k$ we want to explore and then loop through these values, repeating the workflow we looked at previously.
+
+::: {.panel-tabset group="language"}
+## R
+
+Reiterating over a range of $k$ values is reasonably straightforward using tidyverse. Although we could write our own function to loop through these $k$ values, tidyverse has a series of `map()` functions that can do this for you. More information on them [here](https://purrr.tidyverse.org/reference/map.html).
+
+In short, the `map()` function spits out a [list](https://www.w3schools.com/r/r_lists.asp) which contains the output. When we do this on our data, we can create a table that contains lists with all of the information that we need.
+
+Here we calculate the following:
+
+1. the `kclust` column contains a list with all the `kmeans()` output, for each value of $k$
+2. the `tidied` column contains the information on a per-cluster basis
+3. the `glanced` column contains single-row summary for each $k$ - we'll use the `tot.withinss` values a little bit later on
+4. the `augmented` column contains the original data, augmented with the classification that was calculated by the `kmeans()` function
+
+```{r}
+kclusts <- 
+  # check for k = 1 to 6
+  tibble(k = 1:6) %>%
+  mutate(
+    # perform clustering for each k
+    kclust = map(k, ~ kmeans(penguins_scaled, .x)),
+    # summary at per-cluster level
+    tidied = map(kclust, tidy),
+    # get single-row summary
+    glanced = map(kclust, glance),
+    # add classification to data set
+    augmented = map(kclust, augment, penguins_scaled))
+
+kclusts
+```
+
+Lists can sometimes be a bit tricky to get your head around, so it's worthwhile exploring the output. RStudio is particularly useful for this, since you can just left-click on the object in your `Environment` panel and look.
+
+The way I see lists in this context is as containers. We have one huge table `kclusts` that contains all of the information that we need. Each 'cell' in this table has a container with the relevant data. The `kclust` column is a list with `kmeans` objects (the output of our `kmeans()` for each of the $k$ values), whereas the other columns are lists of tibbles (because the `tidy()`, `glance()` and `augment()` functions output a tibble with the information for each value of $k$).
+
+For us to use the data in the lists, it makes sense to extract them on a column-by-column basis. We're ignoring the `kclust` column, because we don't need the actual `kmeans()` output any more.
+
+To extract the data from the lists we use the `unnest()` function.
+
+```{r}
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+```
+
+Next, we can visualise some of the data. We'll start by plotting the scaled data and colouring the data points based on the final cluster it has been assigned to by the `kmeans()` function.
+
+The (augmented) data are in `assignments`. Have a look at the structure of the table.
+
+We facet the data by $k$, so we get a single panel for each value of $k$.
+
+We also add the calculated cluster centres, which are stored in `clusters`.
+
+```{r}
+ggplot(assignments,
+       aes(x = bill_depth_scaled,     # plot data
+           y = bill_length_scaled)) +  
+  geom_point(aes(color = .cluster),   # colour by cluster
+             alpha = 0.8) +           # add transparency
+  facet_wrap(vars(k)) +               # facet for each k
+  geom_point(data = clusters,         # add centers
+             size = 7,
+             shape = "x")
+```
+
+## Python
+
+:::
+
+Looking at this plot shows what we already knew (if only things were this easy all the time!): three clusters is a pretty good choice for these data. Remember that you're looking for clusters that are distinct, _i.e._ are separated from one another. For example, using `k = 4` gives you four nice groups, but two of them are directly adjacent, suggesting that they would do equally well in a single cluster.
+
+### Elbow plot
+Visualising the data like this can be helpful but at the same time it can also be a bit subjective (hoorah!). To find another subjective way of interpreting these clusters (remember, statistics isn't this YES/NO magic mushroom and we should be comfortable wandering around in the murky grey areas of statistics by now), we can plot the total within-cluster variation for each value of `k`.
+
+Intuitively, if you keep adding clusters then the total amount of variation that can be explained by these clusters will increase. The most extreme case would be where each data point is its own cluster and we can then explain all of the variation in the data.
+
+Of course that is not a very sensible approach - hence us balancing the number of clusters against how much variation they can capture.
+
+A practical approach to this is creating an "elbow" plot where the cumulative amount of variation explained is plotted against the number of clusters.
+
+::: {.panel-tabset group="language"}
+## R
+
+The output of the `kmeans()` function includes `tot.withinss` - this is the total within-cluster sum of squares.
+
+```{r}
+ggplot(clusterings,
+       aes(x = k,                # for each k plot...
+           y = tot.withinss)) +  # total within variance
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(
+    breaks = seq(1, 6, 1))       # set the x-axis breaks
+```
+
+## Python
+
+:::
+
+We can see that the total within-cluster sum of squares decreases as the number of clusters increases. We can also see that from `k = 3` onwards the slope of the line becomes much shallower. This "elbow" or bending point is a useful gauge to find the optimum number of clusters.
+
+From the exploration we can see that three clusters are optimal in this scenario.
+
+
+## Exercises
+
+### Finch beaks {#sec-exr_finchkmeans}
+
+:::{.callout-exercise}
+
+{{< level 2 >}}
+
+For this exercise we'll be using the data from `data/finch_beaks.csv`.
+
+The `finches` data has been adapted from the [accompanying website](https://doi.org/10.5061/dryad.g6g3h) to _40 years of evolution. Darwin's finches on Daphne Major Island_ by Peter R. Grant and Rosemary B. Grant.
+
+Practice running through the clustering workflow using the `finches` dataset. Try doing the following:
+
+1. Read in the data
+2. Explore and visualise the data
+3. Perform the clustering with `k = 2`
+4. Find out if using `k = 2` is a reasonable choice
+5. Try and draw some conclusions
+
+::: {.callout-answer collapse="true"}
+
+#### Load and visualise
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| message: false
+finches <- read_csv("data/finch_beaks.csv")
+
+head(finches)
+```
+
+```{r}
+ggplot(finches, aes(x = beak_depth_mm,
+                    y = beak_length_mm,
+                    colour = species)) +
+  geom_point()
+```
+
+## Python
+
+:::
+
+#### Clustering
+
+Next, we perform the clustering. We first clean and scale the data.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+finches_scaled <- finches %>% 
+  select(beak_depth_mm,          # select data
+         beak_length_mm) %>% 
+  drop_na() %>%                  # remove missing values
+  scale() %>%                    # scale the data
+  as_tibble() %>% 
+  rename(bdepth_scaled = beak_depth_mm,
+         blength_scaled = beak_length_mm)
+```
+
+```{r}
+kclust <-
+  kmeans(finches_scaled,         # perform k-means clustering
+         centers = 2)            # using 2 centers
+
+summary(kclust)                  # summarise output
+```
+
+```{r}
+tidy_clust <- tidy(kclust) # get centroid coordinates
+
+tidy_clust
+```
+
+## Python
+
+:::
+
+#### Visualise the clusters
+
+We can visualise the clusters as follows:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+kclust %>%                              # take clustering data
+  augment(finches_scaled) %>%           # combine with original data
+  ggplot(aes(x = bdepth_scaled,         # plot the original data
+             y = blength_scaled)) +
+  geom_point(aes(colour = .cluster)) +  # colour by classification
+  geom_point(data = tidy_clust,
+             size = 7, shape = 'x')     # add the cluster centers
+```
+
+## Python
+
+:::
+
+#### Optimise clusters
+
+It looks like two clusters is a reasonable choice. But let's explore this a bit more.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+kclusts <- 
+  # check for k = 1 to 6
+  tibble(k = 1:6) %>%
+  mutate(
+    # perform clustering for each k
+    kclust = map(k, ~ kmeans(finches_scaled, .x)),
+    # summary at per-cluster level
+    tidied = map(kclust, tidy),
+    # get single-row summary
+    glanced = map(kclust, glance),
+    # add classification to data set
+    augmented = map(kclust, augment, finches_scaled)
+  )
+```
+
+Extract the relevant data.
+```{r}
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+```
+
+Visualise the result.
+
+```{r}
+ggplot(assignments,
+       aes(x = bdepth_scaled,        # plot data
+           y = blength_scaled)) +  
+  geom_point(aes(color = .cluster),  # colour by cluster
+             alpha = 0.8) +          # add transparency
+  facet_wrap(~ k) +                  # facet for each k
+  geom_point(data = clusters,        # add centers
+             size = 7,
+             shape = 'x')
+```
+
+Create an elbow plot to have a closer look.
+
+```{r}
+ggplot(clusterings,
+       aes(x = k,                # for each k plot...
+           y = tot.withinss)) +  # total within variance
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(
+    breaks = seq(1, 6, 1))       # set the x-axis breaks
+```
+
+## Python
+
+:::
+
+#### Conclusions
+
+Our initial clustering was done using two clusters, basically capturing the two different finch species.
+
+Redoing the analysis with different numbers of clusters seems to reasonably support that decision. The elbow plot suggests that `k = 3` would not be such a terrible idea either.
+
+In the example above we used data that were collected at two different time points: 1975 and 2012.
+
+In the analysis we've kept these data together. However, the original premises of these data was to see if there is any indication of evolution going on in these species of finches. Think about how you would approach this question!
+:::
+:::
+
+## Summary
+
+::: {.callout-tip}
+#### Key points
+
+- k-means clustering partitions data into clusters
+- the `k` defines the number of clusters
+- cluster centers or centroids get assigned randomly
+- each data point gets assigned to the closest centroid
+- the centroid of the new clusters gets calculated and the process of assignment and recalculation repeats until the cluster do no longer change
+- the optimal number of clusters can be determined with an 'elbow' plot
+:::
