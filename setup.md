@@ -9,7 +9,7 @@ The data used in these materials is provided as a zip file.
 Download and unzip the folder to your Desktop to follow along with the materials.
 
 <!-- Note for Training Developers: add the link to 'href' -->
-<a href="https://github.com/cambiotraining/stats-resampling/raw/main/data_mva.zip">
+<a href="https://github.com/cambiotraining/stats-mva/raw/main/data_mva.zip">
   <button class="btn"><i class="fa fa-download"></i> Download</button>
 </a>
 
