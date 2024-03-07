@@ -245,7 +245,9 @@ We reformat and rename the scaled data:
 # convert NumPy arrays to Pandas DataFrame
 penguins_scaled_py = pd.DataFrame(penguins_scaled_py)
 
-penguins_scaled_py = penguins_scaled_py.rename(columns={0: 'bdepth_scaled', 1: 'blength_scaled'})
+penguins_scaled_py = (penguins_scaled_py
+                      .rename(columns = {0: 'bdepth_scaled',
+                                         1: 'blength_scaled'}))
 ```
 
 
@@ -262,13 +264,16 @@ penguins_py['id'] = range(1, len(penguins_py) + 1)
 penguins_scaled_py['id'] = range(1, len(penguins_scaled_py) + 1)
 
 # merge the data by ID
-penguins_augment_py = pd.merge(penguins_py.dropna(), penguins_scaled_py, on = 'id')
+penguins_augment_py = (pd.merge(penguins_py.dropna(),
+                                penguins_scaled_py,
+                                on = 'id'))
 
 # add the cluster designation
 penguins_augment_py['cluster'] = kmeans.fit_predict(penguins_scaled_py)
 
 # and convert it into a factor
-penguins_augment_py['cluster'] = penguins_augment_py['cluster'].astype('category')
+penguins_augment_py['cluster'] = (penguins_augment_py['cluster']
+                                  .astype('category'))
 
 ```
 
