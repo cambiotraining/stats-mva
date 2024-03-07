@@ -157,14 +157,38 @@ The output is a list of vectors, with differing lengths. That's because they con
 
 To do the clustering, we'll be using the `KMeans()` function.
 
+```{python}
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+std_scaler = StandardScaler()
+
+# remove missing values
+penguins_scaled_py = penguins_py.dropna()
+# select relevant columns
+penguins_scaled_py = penguins_scaled_py[['bill_depth_mm', 'bill_length_mm']]
+
+penguins_scaled_py = std_scaler.fit_transform(penguins_scaled_py)
+
+kmeans = KMeans(
+init = 'random',
+n_clusters = 3,
+n_init = 10,
+max_iter = 300,
+random_state = 42
+)
+
+kmeans.fit(penguins_scaled_py)
+```
+
 :::
 
 ### Visualise clusters
 
+When we performed the clustering, the centers were calculated. These values give the (x, y) coordinates of the centroids.
+
 ::: {.panel-tabset group="language"}
 ## R
-
-When we performed the clustering, the centers were calculated. These values give the (x, y) coordinates of the centroids.
 
 ```{r}
 tidy_clust <- tidy(kclust) # get centroid coordinates
@@ -173,6 +197,22 @@ tidy_clust
 ```
 
 ## Python
+
+```{python}
+# calculate the cluster centers
+kclusts_py = kmeans.cluster_centers_
+kclusts_py = pd.DataFrame(kclusts_py, columns = ['0', '1'])
+
+# convert to Pandas DataFrame and rename columns
+kclusts_py = pd.DataFrame(kclusts_py)
+
+kclusts_py = (kclusts_py
+              .rename(columns = {"0": "bdepth_scaled",
+                                 "1": "blength_scaled"}))
+
+# and show the coordinates
+kclusts_py
+```
 
 :::
 
@@ -198,6 +238,50 @@ kclust %>%                              # take clustering data
 ```
 
 ## Python
+
+We reformat and rename the scaled data:
+
+```{python}
+# convert NumPy arrays to Pandas DataFrame
+penguins_scaled_py = pd.DataFrame(penguins_scaled_py)
+
+penguins_scaled_py = penguins_scaled_py.rename(columns={0: 'bdepth_scaled', 1: 'blength_scaled'})
+```
+
+
+and merge this with the original data:
+
+```{python}
+# remove missing values
+penguins_py = penguins_py.dropna()
+# add an ID column
+penguins_py['id'] = range(1, len(penguins_py) + 1)
+
+# add an ID column to the scaled data
+# so we can match the observations
+penguins_scaled_py['id'] = range(1, len(penguins_scaled_py) + 1)
+
+# merge the data by ID
+penguins_augment_py = pd.merge(penguins_py.dropna(), penguins_scaled_py, on = 'id')
+
+# add the cluster designation
+penguins_augment_py['cluster'] = kmeans.fit_predict(penguins_scaled_py)
+
+# and convert it into a factor
+penguins_augment_py['cluster'] = penguins_augment_py['cluster'].astype('category')
+
+```
+
+We can then (finally!) plot this:
+
+```{python}
+#| results: hide
+(ggplot(penguins_augment_py,
+       aes(x = 'bill_depth_mm',
+           y = 'bill_length_mm',
+           colour = 'cluster')) +
+           geom_point())
+```
 
 :::
 
