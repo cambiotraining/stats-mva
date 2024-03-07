@@ -282,10 +282,12 @@ We can then (finally!) plot this:
 ```{python}
 #| results: hide
 (ggplot(penguins_augment_py,
-       aes(x = 'bill_depth_mm',
-           y = 'bill_length_mm',
+       aes(x = 'bdepth_scaled',
+           y = 'blength_scaled',
            colour = 'cluster')) +
-           geom_point())
+           geom_point() +
+           geom_point(kclusts_py, colour = "black",
+                      shape = "x", size = 7))
 ```
 
 :::
