@@ -7,8 +7,6 @@ number-sections: false
 
 ## Overview 
 
-** UNDER DEVELOPMENT **
-
 This course provides practical materials and background information on the analysis of multivariate data.
 
 ::: {.callout-tip}
@@ -59,7 +57,7 @@ About the authors:
 <a href="https://orcid.org/0000-0002-1441-367X" target="_blank"><i class="fa-brands fa-orcid" style="color:#a6ce39"></i></a> 
   <a href="https://github.com/mvanrongen" target="_blank"><i class="fa-brands fa-github" style="color:#4078c0"></i></a>  
   _Affiliation_: Bioinformatics Training Facility, University of Cambridge  
-  _Roles_: writing - review & editing; conceptualisation; coding
+  _Roles_: writing - original draft, review & editing; conceptualisation; coding
 
 <!--
 ## Citation
